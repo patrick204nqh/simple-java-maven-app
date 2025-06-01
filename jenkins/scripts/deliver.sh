@@ -11,8 +11,6 @@ S3_BUCKET="${S3_BUCKET:-my-jenkins-artifact}" # Use env var if set, fallback to 
 if [ -f "$ARTIFACT" ]; then
   aws s3 cp "$ARTIFACT" "s3://${S3_BUCKET}/${NAME}-${VERSION}.jar"
   echo "Artifact uploaded to s3://${S3_BUCKET}/${NAME}-${VERSION}.jar"
-  # Optionally delete the artifact after upload to save space
-  rm -f "$ARTIFACT"
 else
   echo "Artifact $ARTIFACT not found!"
   exit 1
