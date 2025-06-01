@@ -1,26 +1,19 @@
 #!/usr/bin/env bash
+set -e
 
-echo 'The following Maven command installs your Maven-built Java application'
-echo 'into the local Maven repository, which will ultimately be stored in'
-echo 'Jenkins''s local Maven repository (and the "maven-repository" Docker data'
-echo 'volume).'
-set -x
-mvn jar:jar install:install help:evaluate -Dexpression=project.name
-set +x
+# Extract project name and version
+NAME=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.name)
+VERSION=$(mvn -q -DforceStdout help:evaluate -Dexpression=project.version)
 
-echo 'The following command extracts the value of the <name/> element'
-echo 'within <project/> of your Java/Maven project''s "pom.xml" file.'
-set -x
-NAME=`mvn -q -DforceStdout help:evaluate -Dexpression=project.name`
-set +x
+ARTIFACT="target/${NAME}-${VERSION}.jar"
+S3_BUCKET="${S3_BUCKET:-my-jenkins-artifact}" # Use env var if set, fallback to default
 
-echo 'The following command behaves similarly to the previous one but'
-echo 'extracts the value of the <version/> element within <project/> instead.'
-set -x
-VERSION=`mvn -q -DforceStdout help:evaluate -Dexpression=project.version`
-set +x
-
-echo 'The following command runs and outputs the execution of your Java'
-echo 'application (which Jenkins built using Maven) to the Jenkins UI.'
-set -x
-java -jar target/${NAME}-${VERSION}.jar
+if [ -f "$ARTIFACT" ]; then
+  aws s3 cp "$ARTIFACT" "s3://${S3_BUCKET}/${NAME}-${VERSION}.jar"
+  echo "Artifact uploaded to s3://${S3_BUCKET}/${NAME}-${VERSION}.jar"
+  # Optionally delete the artifact after upload to save space
+  rm -f "$ARTIFACT"
+else
+  echo "Artifact $ARTIFACT not found!"
+  exit 1
+fi
